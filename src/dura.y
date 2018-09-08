@@ -35,52 +35,57 @@
                      Enhanced conditional assembly: IFDEF
 
          v.0.14: [UNRELEASED]
-		     First working Linux version
-		     Somewhat improved stability
+             First working Linux version
+             Somewhat improved stability
 
          v.0.15: [UNRELEASED]
                      ADD IX,HL and ADD IY,HL operations removed
                      Label vs Macro collisions solved
                      Overall improvement in pointer stability
-		     INCBIN now can SKIP and SIZE upto 32-bit 
+             INCBIN now can SKIP and SIZE upto 32-bit
 
          v.0.16: [CANDIDATE]
-		     First version fully developed in Linux
-		     Fixed bug affecting filename extensions
-		     Removed the weird IM 0/1 - apparently it is just a plain undocumented IM 0 opcode
-		     FILENAME directive to set assembler output filenames
-		     ZILOG directive for using Zilog style indirections and official syntax
-		     ROM/MEGAROM now have a standard 16 byte header
-		     Fixed a really annoying bug regarding $DB data read as pseudo DB
-		     SINCLAIR directive included to support TAP file generation (ouch!) --> STILL TO BE TESTED 
+             First version fully developed in Linux
+             Fixed bug affecting filename extensions
+             Removed the weird IM 0/1 - apparently it is just a plain undocumented IM 0 opcode
+             FILENAME directive to set assembler output filenames
+             ZILOG directive for using Zilog style indirections and official syntax
+             ROM/MEGAROM now have a standard 16 byte header
+             Fixed a really annoying bug regarding $DB data read as pseudo DB
+             SINCLAIR directive included to support TAP file generation (ouch!) --> STILL TO BE TESTED
 
-		Pending:
-			- Adjust BIOS for SINCLAIR model?
-			- DISK support
-			- R800/Z80/8080/Gameboy support
-			- Sinclair ZX Spectrum TAP/TZX file format supported
-			
-	 [Post-Rosby versions]
-	 v.0.17: [19/12/2013]
-		[FIX] Issue 1: Crash on Linux when including additional .asm files (by theNestruo)
-		[FIX] Issue 5: Non-zero exit code on errors (by theNestruo)
+        Pending:
+            - Adjust BIOS for SINCLAIR model?
+            - DISK support
+            - R800/Z80/8080/Gameboy support
+            - Sinclair ZX Spectrum TAP/TZX file format supported
 
-	 v.0.18: [01/02/2017]
-	 	Fixed issue with .megaflashrom and the defines.
-	 
-	 v.0.18.1: [11/02/2017]
-	 	Fixed multiple compilation warnings by specifying function parameters and return type explicitly
-                Fixed a problem with cassette file name generation due to uninitialized variable 'binario'
-	 v.0.18.2: [25/05/2017]
-	 	Added -z flag. This flag allows using standard Zilog syntax without setting .ZILOG on the code.
-	 	Now local labels can be also set using .Local_Label along the previous @@Local_Label.
-		Now .instruction are correctly parsed. For instance, before it was allowed to set "azilog", "bzilog"
-		instead of only allowing ".zilog" or "zilog". 
-	 v.0.18.3: [10/06/2017]
-		Fixed induced bug of February 5th when using INCLUDE. Parser 1 p1_tmpstr wasn't using malloc memory. Instead it uses
-		strtok allocated memory. This is never deleted, we must check this in the future to prevent memory leaks.
-	 v.0.18.4: [18/06/2017]
-		Unterminated string hotfix. Find a better way to solve it. Probably a more flex-like fix.
+     [Post-Rosby versions]
+     v.0.17: [19/12/2013]
+        [FIX] Issue 1: Crash on Linux when including additional .asm files (by theNestruo)
+        [FIX] Issue 5: Non-zero exit code on errors (by theNestruo)
+
+     v.0.18: [01/02/2017]
+        Fixed issue with .megaflashrom and the defines.
+
+     v.0.18.1: [11/02/2017]
+        Fixed multiple compilation warnings by specifying function parameters and return type explicitly
+        Fixed a problem with cassette file name generation due to uninitialized variable 'binario'
+     v.0.18.2: [25/05/2017]
+        Added -z flag. This flag allows using standard Zilog syntax without setting .ZILOG on the code.
+        Now local labels can be also set using .Local_Label along the previous @@Local_Label.
+        Now .instruction are correctly parsed. For instance, before it was allowed to set "azilog", "bzilog"
+        instead of only allowing ".zilog" or "zilog".
+     v.0.18.3: [10/06/2017]
+        Fixed induced bug of February 5th when using INCLUDE. Parser 1 p1_tmpstr wasn't using malloc memory. Instead it uses
+        strtok allocated memory. This is never deleted, we must check this in the future to prevent memory leaks.
+     v.0.18.4: [18/06/2017]
+        Unterminated string hotfix. Find a better way to solve it. Probably a more flex-like fix.
+     v.0.18.5: [31/08/2018] symsx
+        Add mnemonics MSX System Variables located in Main ROM (when including .bios)
+        Add mnemonics MSX System Variables located in RAM (when including .bios)
+        Fixed bug when writing generated binary file and it can not be written
+        Fixed bug in DEBUG command
 */
 
 /* Cabecera y definiciones para C */
@@ -92,8 +97,8 @@
 #include <time.h>
 #include <math.h>
 
-#define VERSION "0.18.4"
-#define DATE "18/06/2017"
+#define VERSION "0.18.5"
+#define DATE "31/08/2018"
 
 #define Z80 0
 #define ROM 1
@@ -113,11 +118,11 @@
 #define FREQ_LO 0x8000
 #define SILENCE 0x0000
 
-extern FILE *yyin;		/* yyin is defined in Flex-generated lexer */
+extern FILE *yyin;      /* yyin is defined in Flex-generated lexer */
 extern int yylex(void);
-int preprocessor1(char *);	/* defined in parser1.l */
-int preprocessor2();		/* defined in parser2.l */
-int preprocessor3(int);		/* defined in parser3.l */
+int preprocessor1(char *);  /* defined in parser1.l */
+int preprocessor2();        /* defined in parser2.l */
+int preprocessor3(int);     /* defined in parser3.l */
 
 /* forward function declarations to address GCC -Wimplicit-function-declaration warnings */
 void yyerror(char *);
@@ -293,13 +298,13 @@ struct
 %token <val> MNEMO_POP
 %token <val> MNEMO_EX
 %token <val> MNEMO_EXX
-%token <val> MNEMO_LDI 
+%token <val> MNEMO_LDI
 %token <val> MNEMO_LDIR
-%token <val> MNEMO_LDD 
+%token <val> MNEMO_LDD
 %token <val> MNEMO_LDDR
-%token <val> MNEMO_CPI 
+%token <val> MNEMO_CPI
 %token <val> MNEMO_CPIR
-%token <val> MNEMO_CPD 
+%token <val> MNEMO_CPD
 %token <val> MNEMO_CPDR
 %token <val> MNEMO_ADD
 %token <val> MNEMO_ADC
@@ -356,7 +361,7 @@ struct
 %token <val> MNEMO_RETI
 %token <val> MNEMO_RETN
 %token <val> MNEMO_RST
-       
+
 %token <val> REGISTRO
 %token <val> REGISTRO_IX
 %token <val> REGISTRO_IY
@@ -371,7 +376,7 @@ struct
 %token <val> REGISTRO_16_IX
 %token <val> REGISTRO_16_IY
 %token <val> REGISTRO_PAR
-%token <val> MODO_MULTIPLE       
+%token <val> MODO_MULTIPLE
 %token <val> CONDICION
 
 %token <val> NUMERO
@@ -635,8 +640,12 @@ pseudo_instruccion: PSEUDO_ORG valor {
             {
               guardar_byte(0x52);
               guardar_byte(0x18);
-              guardar_byte((int)(strlen($2) + 4));
+/* Debut symsx */
+//              guardar_byte((int)(strlen($2) + 4));
+              guardar_byte((int)(strlen($2) + 1));
               guardar_texto($2);
+/* Fin symsx */
+              guardar_byte(0x00);
             }
           }
         | PSEUDO_BREAK {
@@ -662,8 +671,8 @@ pseudo_instruccion: PSEUDO_ORG valor {
               if (pass == 2)
               {
                 if (mensajes == NULL)
-                  salida_texto();	/* TODO: check if salida_texto() changes mensajes; if not, use if-then-else */
-				if (mensajes)
+                  salida_texto();   /* TODO: check if salida_texto() changes mensajes; if not, use if-then-else */
+                if (mensajes)
                   fprintf(mensajes, "%s\n", $2);
               }
             }
@@ -675,7 +684,7 @@ pseudo_instruccion: PSEUDO_ORG valor {
               {
                 if (mensajes == NULL)
                   salida_texto();
-				if (mensajes)
+                if (mensajes)
                   fprintf(mensajes, "%d\n", (short int)$2 & 0xffff);
               }
             }
@@ -687,7 +696,7 @@ pseudo_instruccion: PSEUDO_ORG valor {
               {
                 if (mensajes == NULL)
                   salida_texto();
-				if (mensajes)
+                if (mensajes)
                   fprintf(mensajes, "%.4f\n", $2);
               }
             }
@@ -699,7 +708,7 @@ pseudo_instruccion: PSEUDO_ORG valor {
               {
                 if (mensajes == NULL)
                   salida_texto();
-				if (mensajes)
+                if (mensajes)
                   fprintf(mensajes, "$%4.4x\n", (short int)$2 & 0xffff);
               }
             }
@@ -711,7 +720,7 @@ pseudo_instruccion: PSEUDO_ORG valor {
               {
                 if (mensajes == NULL)
                   salida_texto();
-				if (mensajes)
+                if (mensajes)
                   fprintf(mensajes, "%.4f\n", ((float)($2 & 0xffff)) / 256);
               }
             }
@@ -727,10 +736,10 @@ pseudo_instruccion: PSEUDO_ORG valor {
           }
         | PSEUDO_IF valor {
             if (conditional_level == 15)
-			{
+            {
               hacer_error(44);
-			  exit(1);	/* this is to stop code analyzer warning about conditional[] buffer overrun */
-			}
+              exit(1);  /* this is to stop code analyzer warning about conditional[] buffer overrun */
+            }
             conditional_level++;
             if ($2)
               conditional[conditional_level] = 1 & conditional[conditional_level - 1];
@@ -739,10 +748,10 @@ pseudo_instruccion: PSEUDO_ORG valor {
           }
         | PSEUDO_IFDEF IDENTIFICADOR {
             if (conditional_level == 15)
-			{
+            {
               hacer_error(44);
-			  exit(1);	/* this is to stop code analyzer warning about conditional[] buffer overrun */
-			}
+              exit(1);  /* this is to stop code analyzer warning about conditional[] buffer overrun */
+            }
             conditional_level++;
             if (simbolo_definido($2))
               conditional[conditional_level] = 1 & conditional[conditional_level - 1];
@@ -789,25 +798,25 @@ pseudo_instruccion: PSEUDO_ORG valor {
 indireccion_IX: '[' REGISTRO_16_IX ']' {
             $$ = 0;
           }
-	| '[' REGISTRO_16_IX '+' valor_8bits ']' {
+    | '[' REGISTRO_16_IX '+' valor_8bits ']' {
             $$ = $4;
           }
-	| '[' REGISTRO_16_IX '-' valor_8bits ']' {
+    | '[' REGISTRO_16_IX '-' valor_8bits ']' {
             $$ = -$4;
           }
 ;
-	
+
 indireccion_IY: '[' REGISTRO_16_IY ']' {
             $$ = 0;
           }
-	| '[' REGISTRO_16_IY '+' valor_8bits ']' {
+    | '[' REGISTRO_16_IY '+' valor_8bits ']' {
             $$ = $4;
           }
-	| '[' REGISTRO_16_IY '-' valor_8bits ']' {
+    | '[' REGISTRO_16_IY '-' valor_8bits ']' {
             $$ = -$4;
           }
 ;
-	
+
 mnemo_load8bit: MNEMO_LD REGISTRO ',' REGISTRO {
             guardar_byte(0x40 | ($2 << 3) | $4);
           }
@@ -977,7 +986,7 @@ mnemo_load16bit: MNEMO_LD REGISTRO_PAR ',' valor_16bits {
               guardar_byte(0xed);
               guardar_byte(0x4b | ($2 << 4));
             }
-            else 
+            else
               guardar_byte(0x2a);
             guardar_word($5);
           }
@@ -1375,7 +1384,7 @@ mnemo_arit8bit: MNEMO_ADD REGISTRO ',' REGISTRO {
         | MNEMO_OR REGISTRO ',' REGISTRO_IX {
             if ($2 != 7)
               hacer_error(4);
-            if (zilog) 
+            if (zilog)
               hacer_advertencia(5);
             guardar_byte(0xdd);
             guardar_byte(0xb0 | $4);
@@ -2162,7 +2171,7 @@ mnemo_rotate: MNEMO_RLCA {
         | MNEMO_SLA REGISTRO_IND_HL {
             guardar_byte(0xcb);
             guardar_byte(0x26);
-          } 
+          }
         | MNEMO_SLA indireccion_IX ',' REGISTRO {
             if ($4 == 6)
               hacer_error(2);
@@ -2863,7 +2872,7 @@ valor_real: REAL {
             $$ = sqrt($3);
           }
         | PSEUDO_PI {
-            $$ = asin(1) * 2;	/* TODO: replace with actual constant to avoid slightly different ROMs depending on compiler */
+            $$ = asin(1) * 2;   /* TODO: replace with actual constant to avoid slightly different ROMs depending on compiler */
           }
         | PSEUDO_ABS '(' valor_real ')' {
             $$ = abs((int)$3);
@@ -3074,6 +3083,153 @@ void msx_bios()
   registrar_simbolo("GETCPU", 0x0183, 0);
   registrar_simbolo("PCMPLY", 0x0186, 0);
   registrar_simbolo("PCMREC", 0x0189, 0);
+/* MSX System Variables located in Main ROM (symsx Cregut) */
+  registrar_simbolo("CGTABL",0x0004,    0);
+  registrar_simbolo("VDP_DR",0x0006,    0);
+  registrar_simbolo("VDP_DW",0x0007,    0);
+  registrar_simbolo("MSXID1",0x002b,    0); /* not standard name */
+  registrar_simbolo("MSXID2",0x002c,    0); /* not standard name */
+  registrar_simbolo("MSXID3",0x002d,    0); /* not standard name */
+/* MSX System Variables located in RAM (symsx Cregut) */
+  registrar_simbolo("RDPRIM",0xf380,    0);
+  registrar_simbolo("WRPRIM",0xf385,    0);
+  registrar_simbolo("CLPRIM",0xf38c,    0);
+  registrar_simbolo("LINL40",0xf3ae,    0);
+  registrar_simbolo("LINL32",0xf3af,    0);
+  registrar_simbolo("LINLEN",0xf3b0,    0);
+  registrar_simbolo("CRTCNT",0xf3b1,    0);
+  registrar_simbolo("CLMLST",0xf3b2,    0);
+  registrar_simbolo("TXTNAM",0xf3b3,    0);
+  registrar_simbolo("TXTCOL",0xf3b5,    0);
+  registrar_simbolo("TXTCGP",0xf3b7,    0);
+  registrar_simbolo("TXTATR",0xf3b9,    0);
+  registrar_simbolo("TXTPAT",0xf3bb,    0);
+  registrar_simbolo("T32NAM",0xf3bd,    0);
+  registrar_simbolo("T32COL",0xf3bf,    0);
+  registrar_simbolo("T32CGP",0xf3c1,    0);
+  registrar_simbolo("T32ATR",0xf3c3,    0);
+  registrar_simbolo("T32PAT",0xf3c5,    0);
+  registrar_simbolo("GRPNAM",0xf3c7,    0);
+  registrar_simbolo("GRPCOL",0xf3c9,    0);
+  registrar_simbolo("GRPCGP",0xf3cb,    0);
+  registrar_simbolo("GRPATR",0xf3cd,    0);
+  registrar_simbolo("GRPPAT",0xf3cf,    0);
+  registrar_simbolo("MLTNAM",0xf3d1,    0);
+  registrar_simbolo("MLTCOL",0xf3d3,    0);
+  registrar_simbolo("MLTCGP",0xf3d5,    0);
+  registrar_simbolo("MLTATR",0xf3d7,    0);
+  registrar_simbolo("MLTPAT",0xf3d9,    0);
+  registrar_simbolo("CLIKSW",0xf3db,    0);
+  registrar_simbolo("CSRY", 0xf3dc, 0);
+  registrar_simbolo("CSRX", 0xf3dd, 0);
+  registrar_simbolo("CNSDFG",0xf3de,    0);
+  registrar_simbolo("RG0SAV",0xf3df,    0);
+  registrar_simbolo("RG1SAV",0xf3e0,    0);
+  registrar_simbolo("RG2SAV",0xf3e1,    0);
+  registrar_simbolo("RG3SAV",0xf3e2,    0);
+  registrar_simbolo("RG4SAV",0xf3e3,    0);
+  registrar_simbolo("RG5SAV",0xf3e4,    0);
+  registrar_simbolo("RG6SAV",0xf3e5,    0);
+  registrar_simbolo("RG7SAV",0xf3e6,    0);
+  registrar_simbolo("STATFL",0xf3e7,    0);
+  registrar_simbolo("TRGFLG",0xf3e8,    0);
+  registrar_simbolo("FORCLR",0xf3e9,    0);
+  registrar_simbolo("BAKCLR",0xf3ea,    0);
+  registrar_simbolo("BDRCLR",0xf3eb,    0);
+  registrar_simbolo("MAXUPD",0xf3ec,    0);
+  registrar_simbolo("MINUPD",0xf3ef,    0);
+  registrar_simbolo("ATRBYT",0xf3f2,    0);
+  registrar_simbolo("QUEUES",0xf3f3,    0);
+  registrar_simbolo("FRCNEW",0xf3f5,    0);
+  registrar_simbolo("SCNCNT",0xf3f6,    0);
+  registrar_simbolo("REPCNT",0xf3f7,    0);
+  registrar_simbolo("PUTPNT",0xf3f8,    0);
+  registrar_simbolo("GETPNT",0xf3fa,    0);
+  registrar_simbolo("CS120",    0xf3fc, 0);
+  registrar_simbolo("CS240",    0xf401, 0);
+  registrar_simbolo("LOW",0xf406,0);
+  registrar_simbolo("HIGH",0xf408, 0);
+  registrar_simbolo("HEADER",0xf40a, 0);
+  registrar_simbolo("ASPCT1",0xf40b, 0);
+  registrar_simbolo("ASPCT2",0xf40d, 0);
+  registrar_simbolo("ENDPRG",0xf40f, 0);
+  registrar_simbolo("ERRFLG",0xf414, 0);
+  registrar_simbolo("LPTPOS",0xf415, 0);
+  registrar_simbolo("PRTFLG",0xf416, 0);
+  registrar_simbolo("NTMSXP",0xf417, 0);
+  registrar_simbolo("RAWPRT",0xf418, 0);
+  registrar_simbolo("VLZADR",0xf419, 0);
+  registrar_simbolo("VLZDAT",0xf41b, 0);
+  registrar_simbolo("CURLIN",0xf41c, 0);
+  registrar_simbolo("EXBRSA",0xfaf8, 0);
+  registrar_simbolo("PRSCNT",0xfb35, 0);
+  registrar_simbolo("SAVSP",0xfb36, 0);
+  registrar_simbolo("VOICEN",0xfb38, 0);
+  registrar_simbolo("SAVVOL",0xfb39, 0);
+  registrar_simbolo("MCLLEN",0xfb3b, 0);
+  registrar_simbolo("MCLPTR",0xfb3c, 0);
+  registrar_simbolo("QUEUEN",0xfb3e, 0);
+  registrar_simbolo("MUSICF",0xfb3f, 0);
+  registrar_simbolo("PLYCNT",0xfb40, 0);
+  registrar_simbolo("VCBA",0xfb41, 0);
+  registrar_simbolo("VCBB",0xfb66, 0);
+  registrar_simbolo("VCBC",0xfb8b, 0);
+  registrar_simbolo("ENSTOP",0xfbb0, 0);
+  registrar_simbolo("BASROM",0xfbb1, 0);
+  registrar_simbolo("LINTTB",0xfbb2, 0);
+  registrar_simbolo("FSTPOS",0xfbca, 0);
+  registrar_simbolo("CODSAV",0xfbcc, 0);
+  registrar_simbolo("FNKSWI",0xfbcd, 0);
+  registrar_simbolo("FNKFLG",0xfbce, 0);
+  registrar_simbolo("ONGSBF",0xfbd8, 0);
+  registrar_simbolo("CLIKFL",0xfbd9, 0);
+  registrar_simbolo("OLDKEY",0xfbda, 0);
+  registrar_simbolo("NEWKEY",0xfbe5, 0);
+  registrar_simbolo("KEYBUF",0xfbf0, 0);
+  registrar_simbolo("BUFEND",0xfc18, 0);
+  registrar_simbolo("LINWRK",0xfc18, 0);
+  registrar_simbolo("PATWRK",0xfc40, 0);
+  registrar_simbolo("BOTTOM",0xfc48, 0);
+  registrar_simbolo("HIMEM ",0xfc4a, 0);
+  registrar_simbolo("TRPTBL",0xfc4c, 0);
+  registrar_simbolo("RTYCNT",0xfc9a, 0);
+  registrar_simbolo("INTFLG",0xfc9b, 0);
+  registrar_simbolo("PADY",0xfc9c, 0);
+  registrar_simbolo("PADX",0xfc9d, 0);
+  registrar_simbolo("JIFFY",0xfc9e, 0);
+  registrar_simbolo("INTVAL",0xfca0, 0);
+  registrar_simbolo("INTCNT",0xfca2, 0);
+  registrar_simbolo("LOWLIM",0xfca4, 0);
+  registrar_simbolo("WINWID",0xfca5, 0);
+  registrar_simbolo("GRPHED",0xfca6, 0);
+  registrar_simbolo("ESCCNT",0xfca7, 0);
+  registrar_simbolo("INSFLG",0xfca8, 0);
+  registrar_simbolo("CSRSW",0xfca9, 0);
+  registrar_simbolo("CSTYLE",0xfcaa, 0);
+  registrar_simbolo("CAPST",0xfcab, 0);
+  registrar_simbolo("KANAST",0xfcac, 0);
+  registrar_simbolo("KANAMD",0xfcad, 0);
+  registrar_simbolo("FLBMEM",0xfcae, 0);
+  registrar_simbolo("SCRMOD",0xfcaf, 0);
+  registrar_simbolo("OLDSCR",0xfcb0, 0);
+  registrar_simbolo("CASPRV",0xfcb1, 0);
+  registrar_simbolo("BRDATR",0xfcb2, 0);
+  registrar_simbolo("GXPOS",0xfcb3, 0);
+  registrar_simbolo("GYPOS",0xfcb5, 0);
+  registrar_simbolo("GRPACX",0xfcb7, 0);
+  registrar_simbolo("GRPACY",0xfcb9, 0);
+  registrar_simbolo("DRWFLG",0xfcbb, 0);
+  registrar_simbolo("DRWSCL",0xfcbc, 0);
+  registrar_simbolo("DRWANG",0xfcbd, 0);
+  registrar_simbolo("RUNBNF",0xfcbe, 0);
+  registrar_simbolo("SAVENT",0xfcbf, 0);
+  registrar_simbolo("EXPTBL",0xfcc1, 0);
+  registrar_simbolo("SLTTBL",0xfcc5, 0);
+  registrar_simbolo("SLTATR",0xfcc9, 0);
+  registrar_simbolo("SLTWRK",0xfd09, 0);
+  registrar_simbolo("PROCNM",0xfd89, 0);
+  registrar_simbolo("DEVICE",0xfd99, 0);
+/* end */
 }
 
 void hacer_error(int codigo)
@@ -3221,6 +3377,11 @@ void hacer_error(int codigo)
     case 46:
       fprintf(stderr, "Sinclair directive should preceed any code\n");
       break;
+/* start symsx Cregut */
+    case 47:
+      fprintf(stderr, "Cannot write output binary file\n");
+      break;
+/* end */
     default:
       fprintf(stderr, "Unexpected error code %d\n", codigo);
   }
@@ -3293,7 +3454,7 @@ void guardar_byte(int b)
       ePC++;
     }
     else
-    {	/* if (type==MEGAROM) */
+    {   /* if (type==MEGAROM) */
       if (subpage == 0x100)
         hacer_error(35);
 
@@ -3447,7 +3608,7 @@ int leer_etiqueta(char *nombre)
     return ePC;
 
   hacer_error(12);
-  exit(0);	/* hacer_error() never returns; add exit() to stop compiler warnings about bad return value */
+  exit(0);  /* hacer_error() never returns; add exit() to stop compiler warnings about bad return value */
 }
 
 int leer_local(char *nombre)
@@ -3462,7 +3623,7 @@ int leer_local(char *nombre)
       return lista_identificadores[i].valor;
 
   hacer_error(13);
-  exit(0);	/* hacer_error() never returns; add exit() to stop compiler warnings about bad return value */
+  exit(0);  /* hacer_error() never returns; add exit() to stop compiler warnings about bad return value */
 }
 
 void salida_texto()
@@ -3491,10 +3652,10 @@ void salvar_simbolos()
   if (j > 0)
   {
     if ((fichero = fopen(simbolos, "wt")) == NULL)
-	{
+    {
       hacer_error(0);
-	  exit(1); /* this is unreachable due to hacer_error() never returning; use it to prevent code analyzer warning */
-	}
+      exit(1); /* this is unreachable due to hacer_error() never returning; use it to prevent code analyzer warning */
+    }
 
     fprintf(fichero, "; Symbol table from %s\n", ensamblador);
     fprintf(fichero, "; generated by asMSX v.%s\n\n", VERSION);
@@ -3572,14 +3733,14 @@ void incluir_binario(char *nombre, int skip, int n)
 
   if (pass == 1)
     printf("\n");
- 
+
   if (skip)
     for (i = 0; (!feof(fichero)) && (i < skip); i++)
       k = fgetc(fichero);
- 
+
   if (skip && feof(fichero))
     hacer_error(29);
- 
+
   if (n)
   {
     for (i = 0; (i < n) && (!feof(fichero));)
@@ -3595,10 +3756,10 @@ void incluir_binario(char *nombre, int skip, int n)
       hacer_error(29);
   }
   else
-    for (; !feof(fichero);)		/* TODO: rewrite this as while loop and test it */
+    for (; !feof(fichero);)     /* TODO: rewrite this as while loop and test it */
     {
       k = fgetc(fichero);
-      if (!feof(fichero))		/* TODO: can this loose the last byte from included file? */
+      if (!feof(fichero))       /* TODO: can this loose the last byte from included file? */
         guardar_byte(k);
     }
 
@@ -3685,7 +3846,9 @@ void guardar_binario()
   }
 
   printf("Binary file %s saved\n", binario);
-  output = fopen(binario, "wb");
+/* symsx Cregut */
+  if ((output=fopen(binario,"wb"))==NULL) hacer_error(47);
+/* end */
   if (type == BASIC)
   {
     putc(0xfe, output);
@@ -3710,7 +3873,7 @@ void guardar_binario()
 
       {
         size_t t;
-        for (t = 0; t < 10; t++) 
+        for (t = 0; t < 10; t++)
           if (t < strlen(filename))
             write_zx_byte(filename[t]);
           else
@@ -3752,16 +3915,16 @@ void guardar_binario()
       write_zx_byte(parity);
     }
 
-    putc(19, output);		/* Header len */
-    putc(0, output);		/* MSB of len */
-    putc(0, output);		/* Header is 0 */
+    putc(19, output);       /* Header len */
+    putc(0, output);        /* MSB of len */
+    putc(0, output);        /* Header is 0 */
     parity = 0;
 
-    write_zx_byte(3);		/* Filetype (Code) */
+    write_zx_byte(3);       /* Filetype (Code) */
 
     {
       size_t t;
-      for (t = 0; t < 10; t++) 
+      for (t = 0; t < 10; t++)
         if (t < strlen(filename))
           write_zx_byte(filename[t]);
         else
@@ -3769,13 +3932,13 @@ void guardar_binario()
     }
 
     write_zx_word(dir_final - dir_inicio + 1);
-    write_zx_word(dir_inicio);	/* load address */
-    write_zx_word(0);		/* offset */
+    write_zx_word(dir_inicio);  /* load address */
+    write_zx_word(0);       /* offset */
     write_zx_byte(parity);
 
-    write_zx_word(dir_final - dir_inicio + 3);	/* Length of next block */
+    write_zx_word(dir_final - dir_inicio + 3);  /* Length of next block */
     parity = 0;
-    write_zx_byte(255);		/* Data... */
+    write_zx_byte(255);     /* Data... */
 
     for (i = dir_inicio; i <= dir_final; i++)
       write_zx_byte(memory[i]);
@@ -3808,7 +3971,7 @@ void finalizar()
   /* Obtener nombre del archivo de simbolos */
   strcpy(simbolos, filename);
   simbolos = strcat(simbolos, ".sym");
- 
+
   guardar_binario();
 
   if (cassette & 1)
@@ -3835,7 +3998,7 @@ void finalizar()
 
 void inicializar_memory()
 {
-  const size_t memory_size = 0x1000000;	/* 16 megabytes */
+  const size_t memory_size = 0x1000000; /* 16 megabytes */
 
   memory = malloc(memory_size);
   if (!memory)
@@ -3894,9 +4057,9 @@ void type_megarom(int n)
 
   if ((pass == 1) && (!dir_inicio))
     hacer_error(19);
-/* 
+/*
   if ((pass == 1) && ((!PC) || (!ePC)))
-    hacer_error(19); 
+    hacer_error(19);
 */
   if ((type) && (type != MEGAROM))
     hacer_error(20);
@@ -4009,9 +4172,9 @@ int selector(int dir)
 void seleccionar_pagina_directa(int n, int dir)
 {
   int sel;
- 
+
   sel = selector(dir);
- 
+
   if ((pass == 2) && (!usedpage[n]))
     hacer_error(39);
 
@@ -4031,15 +4194,15 @@ void seleccionar_pagina_registro(int r, int dir)
 
   if (r != 7)
   {
-    guardar_byte(0xf5);			/* PUSH AF */
-    guardar_byte(0x40 | (7 << 3) | r);	/* LD A,r */
+    guardar_byte(0xf5);         /* PUSH AF */
+    guardar_byte(0x40 | (7 << 3) | r);  /* LD A,r */
   }
 
   guardar_byte(0x32);
   guardar_word(sel);
 
   if (r != 7)
-    guardar_byte(0xf1);			/* POP AF */
+    guardar_byte(0xf1);         /* POP AF */
 }
 
 void generar_cassette()
@@ -4073,7 +4236,7 @@ void generar_cassette()
       size_t t;
       if (strlen(interno) < 6)
         for (t = strlen(interno); t < 6; t++)
-          interno[t] = 32;	/* pad with space */
+          interno[t] = 32;  /* pad with space */
     }
 
     for (i = 0; i < 6; i++)
@@ -4106,7 +4269,7 @@ void wav_store(int value)
 void wav_write_one()
 {
   int l;
- 
+
   for (l = 0; l < 5 * 2; l++)
     wav_store(FREQ_LO);
 
@@ -4139,12 +4302,12 @@ void wav_write_nothing()
     wav_store(SILENCE);
 }
 
-void wav_write_byte(int m)	/* only used in generar_wav() */
+void wav_write_byte(int m)  /* only used in generar_wav() */
 {
   int l;
 
   wav_write_zero();
-  for (l = 0; l < 8; l++) 
+  for (l = 0; l < 8; l++)
   {
     if (m & 1)
       wav_write_one();
@@ -4156,8 +4319,8 @@ void wav_write_byte(int m)	/* only used in generar_wav() */
   wav_write_one();
 }
 
-void generar_wav()	/* This function is broken since public GPLv3 release */
-{			/* TODO: use https://github.com/joyrex2001/castools to fix it */
+void generar_wav()  /* This function is broken since public GPLv3 release */
+{           /* TODO: use https://github.com/joyrex2001/castools to fix it */
   int wav_size, i;
 
   if ((type == MEGAROM) || ((type == ROM) && (dir_inicio < 0x8000)))
@@ -4256,14 +4419,14 @@ void generar_wav()	/* This function is broken since public GPLv3 release */
   }
   else
     wav_size = 0;
-    
+
   /* Write blank */
   for (i=0; i < 1500; i++)
     wav_write_nothing();
-    
+
   /* Close file */
   fclose(wav);
-  
+
   printf("Audio file %s saved [%2.2f sec]\n", binario, (float)wav_size/176400);
 }
 
@@ -4301,21 +4464,21 @@ int main(int argc, char *argv[])
   int fileArg = 1;
   printf("-------------------------------------------------------------------------------\n");
   printf(" asMSX v.%s. MSX cross-assembler. Eduardo A. Robsy Petrus [%s]\n",VERSION,DATE);
-  printf("-------------------------------------------------------------------------------\n");  
+  printf("-------------------------------------------------------------------------------\n");
   if (argc > 3 || argc < 2 )
   {
     printf("Syntax: asMSX [-z] [file.asm]\n");
     exit(0);
   } else if (argc == 3){
    if (strcmp(argv[1], "-z") == 0) {
-	 zilog = 1;
-	 fileArg = 2;
+     zilog = 1;
+     fileArg = 2;
    } else {
-	 printf("Syntax: asMSX [-z] [file.asm]\n");
-	 exit(0);
+     printf("Syntax: asMSX [-z] [file.asm]\n");
+     exit(0);
    }
-  }   
-  
+  }
+
   clock();
   inicializar_sistema();
   ensamblador = malloc(256);
@@ -4347,7 +4510,7 @@ int main(int argc, char *argv[])
   preprocessor1(ensamblador);
   preprocessor3(zilog);
   sprintf(original, "~tmppre.%i", preprocessor2());
- 
+
   printf("Assembling source file %s\n", ensamblador);
 
   conditional[0] = 1;
