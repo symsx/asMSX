@@ -1,4 +1,5 @@
-19/12/2013: asMSX patched for working with additional files (thanks to utopian.rgba and samsaga2)
-
-03/09/2016: 
-	-Fixed not working IF clause bug when using MegaROM.
+v.0.18.5: [31/08/2018] symsx
+   Add mnemonics MSX System Variables located in Main ROM (when including .bios)
+   Add mnemonics MSX System Variables located in RAM (when including .bios)
+   Fixed bug when writing generated binary file and it can not be written
+   Fixed bug in DEBUG command
